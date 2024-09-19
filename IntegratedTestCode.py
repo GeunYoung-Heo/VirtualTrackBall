@@ -1,9 +1,12 @@
 import cv2
 import mediapipe as mp
 import time
+import keyboard
+import pyautogui
 
 # HyperParameter
 dist_threshold = 40 # threshold distance of two finger tips
+cursor_speed = 10
 
 # MediaPipe의 손 인식 모듈 초기화
 mp_hands = mp.solutions.hands
@@ -12,12 +15,20 @@ mp_drawing = mp.solutions.drawing_utils
 # 웹캠 초기화
 cap = cv2.VideoCapture(0)
 
+# 비디오 창 크기 설정 (폭, 높이)
+cv2.namedWindow('Hand Detection', cv2.WINDOW_NORMAL)
+cv2.resizeWindow('Hand Detection', 1600, 1200)  # 원하는 크기로 조정
+
 # FPS 계산을 위한 초기 시간 설정
 prev_time = 0
 
 # distance
 dist_px_of_fingertips = 9999
 validity_color = (255,0,0)
+
+last_cx = -1
+last_cy = -1
+
 
 # Hands 모듈 설정
 with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.7, min_tracking_confidence=0.7) as hands:
@@ -54,6 +65,21 @@ with mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.7, min_tracking_
                 
                 # Calculate distance between two fingertips as pixel unit
                 dist_px_of_fingertips = ((cx_thumb - cx_index)**2+(cy_thumb - cy_index)**2)**0.5
+                
+                current_cx = (cx_index + cx_thumb)/2
+                current_cy = (cy_index + cy_thumb)/2
+                
+                #Only move cursor if two fingers are closed in both two timeframes(last and current)
+                if dist_px_of_fingertips <= dist_threshold: # current timeframe's fingers are closed
+                    if last_cx >= 0: # last timeframe's fingers are closed
+                        dx = current_cx - last_cx
+                        dy = current_cy - last_cy
+                        pyautogui.move(dx * cursor_speed, dy * cursor_speed)
+                    last_cx = current_cx
+                    last_cy = current_cy
+                else:
+                    last_cx = -1
+                    last_cy = -1
                 
                 # set proper color
                 if dist_px_of_fingertips > dist_threshold:
